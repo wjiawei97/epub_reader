@@ -16,6 +16,13 @@
               :fontSizeList='fontSizeList'
               :defaultFontSize="defaultFontSize"
               @setFontSize='setFontSize'
+              :themeList='themeList'
+              :defaultTheme='defaultTheme'
+              @setTheme='setTheme'
+              @onProgressChange='onProgressChange'
+              :bookAvailable='bookAvailable'
+              @jumpTo='jumpTo'
+              :navigation='navigation'
               ref="menuBar"></menu-bar>
   </div>
 </template>
@@ -50,7 +57,7 @@ export default {
           style: {
             body: {
               'color': '#000',
-              'background-color': '#fff'
+              'background': '#fff'
             }
           }
         },
@@ -59,7 +66,7 @@ export default {
           style: {
             body: {
               'color': '#000',
-              'background-color': '#ceeaba'
+              'background': '#ceeaba'
             }
           }
         },
@@ -67,7 +74,7 @@ export default {
           name: 'light', style: {
             body: {
               'color': '#fff',
-              'background-color': '#000'
+              'background': '#000'
             }
           }
         },
@@ -75,11 +82,17 @@ export default {
           name: 'gold', style: {
             body: {
               'color': '#000',
-              'background-color': 'rgba(241,236,226)'
+              'background': 'rgba(241,236,226)'
             }
           }
         }
-      ]
+      ],
+      // 默认样式索引
+      defaultTheme: 0,
+      // 图书是否处于可用状态
+      bookAvailable: false,
+      // navigation对象
+      navigation: null
     }
   },
   components: {
@@ -87,6 +100,30 @@ export default {
     MenuBar
   },
   methods: {
+    // 根据链接跳转到指定位置，并隐藏标题栏、菜单栏、设置栏、目录
+    jumpTo (href) {
+      this.rendition.display(href)
+      this.hideTitleAndMenu()
+    },
+    hideTitleAndMenu () {
+      // 隐藏标题栏和菜单栏
+      this.isTitleAndMenuShow = false
+      // 隐藏菜单栏的设置栏
+      this.$refs.menuBar.hideSetting()
+      // 隐藏目录
+      this.$refs.menuBar.hideContent()
+    },
+    // 根据进度条长度/100 设置当前位置
+    onProgressChange (progress) {
+      const percentage = progress / 100
+      const location = percentage > 0 ? this.locations.cfiFromPercentage(percentage) : 0 // 将百分比转为位置
+      this.rendition.display(location)
+    },
+    // 根据索引设置主题颜色
+    setTheme (index) {
+      this.themes.select(this.themeList[index].name)
+      this.defaultTheme = index
+    },
     // 注册主题
     registerTheme () {
       this.themeList.forEach((theme) => {
@@ -138,7 +175,19 @@ export default {
       // 注册主题样式
       this.registerTheme()
       // 切换主题
-      // this.themes.select('eye')
+      this.setTheme(this.defaultTheme)
+      // 通过epubjs钩子函数实现获取location对象
+      this.book.ready.then(() => {
+        // 获取navigation对象
+        this.navigation = this.book.navigation
+        // console.log(this.navigation);
+        return this.book.locations.generate()
+      }).then(result => {
+        this.locations = this.book.locations
+        this.bookAvailable = true
+        // this.onProgressChange(10)
+      })
+
     }
   },
   mounted () {

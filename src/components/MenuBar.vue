@@ -6,24 +6,28 @@
            v-show="isTitleAndMenuShow"
            :class="{'hide-box-shadow':isSettingShow || !isTitleAndMenuShow}">
         <div class="icon-wrapper">
-          <span class="icon-menu icon"></span>
+          <span class="icon-menu icon"
+                @click="showSetting(3)"></span>
         </div>
         <div class="icon-wrapper">
-          <span class="icon-progress icon"></span>
+          <span class="icon-progress icon"
+                @click="showSetting(2)"></span>
         </div>
         <div class="icon-wrapper">
-          <span class="icon-bright icon"></span>
+          <span class="icon-bright icon"
+                @click="showSetting(1)"></span>
         </div>
         <div class="icon-wrapper">
           <span class="icon-a icon"
-                @click="showSetting">A</span>
+                @click="showSetting(0)">A</span>
         </div>
       </div>
     </transition>
     <transition name="slide-up">
       <div class="setting-wrapper"
            v-show="isSettingShow">
-        <div class="setting-font-size">
+        <div class="setting-font-size"
+             v-if="showTag===0">
           <div class="preview"
                :style="{fontSize:fontSizeList[0].fontSize+'px'}">A</div>
           <div class="select">
@@ -43,6 +47,50 @@
           <div class="preview"
                :style="{fontSize:fontSizeList[fontSizeList.length-1].fontSize+'px'}">A</div>
         </div>
+        <div class="setting-theme"
+             v-else-if="showTag===1">
+          <div class="setting-theme-item"
+               v-for="(item,index) in themeList"
+               @click="setTheme(index)"
+               :key="index">
+            <div class="preview"
+                 :style="{backgroundColor:item.style.body.background}"
+                 :class="{'no-border':index!==0}"></div>
+            <div class="text"
+                 :class="{'text-selected':index===defaultTheme}">{{item.name}}</div>
+          </div>
+        </div>
+        <div class="setting-progress"
+             v-else-if="showTag===2">
+          <div class="progress-wrapper">
+            <input class="progress"
+                   type="range"
+                   max="100"
+                   min="0"
+                   step="1"
+                   @change="onProgressChange($event.target.value)"
+                   @input="onProgressInput($event.target.value)"
+                   :value="progress"
+                   :disabled='!bookAvailable'
+                   ref="progress">
+          </div>
+          <div class="text-wrapper">
+            <span>{{bookAvailable?progress+'%':'加载中...'}}</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 目录区域 -->
+    <content-view :navigation='navigation'
+                  :bookAvailable='bookAvailable'
+                  @jumpTo='jumpTo'
+                  v-show="ifShowContent"></content-view>
+    <!-- 目录蒙版区域 -->
+    <transition name="fade">
+      <div class="content-mask"
+           v-show="ifShowContent">
+
       </div>
     </transition>
 
@@ -51,24 +99,57 @@
 </template>
 
 <script>
+import ContentView from '@/components/Content'
+
 export default {
   data () {
     return {
-      isSettingShow: false
+      isSettingShow: false,
+      // 控制菜单栏子项栏的显示与隐藏
+      showTag: 0,
+      progress: 0,
+      // 是否显示目录
+      ifShowContent: false
     }
   },
   methods: {
+    // 拖动进度条时触发事件
+    onProgressInput (value) {
+      this.progress = value
+      this.$refs.progress.style.backgroundSize = `${this.progress}% 100%`
+    },
+    // 进度条松开后触发事件，根据进度条数值跳转到指定位置
+    onProgressChange (value) {
+      this.$emit('onProgressChange', value)
+    },
+    // 根据索引设置主题颜色
+    setTheme (index) {
+      this.$emit('setTheme', index)
+    },
     // 点击进度条，设置字号
     setFontSize (fontSize) {
       this.$emit('setFontSize', fontSize)
     },
     // 控制字号设置窗口的显示
-    showSetting () {
-      this.isSettingShow = true
+    showSetting (index) {
+      if (index === 3) {
+        // 如果是目录
+        this.ifShowContent = true
+      } else {
+        this.isSettingShow = true
+      }
+
+      this.showTag = index
     },
-    // 控制字号设置窗口的隐藏
+    // 控制设置窗口的隐藏
     hideSetting () {
       this.isSettingShow = false
+    },
+    hideContent () {
+      this.ifShowContent = false
+    },
+    jumpTo (href) {
+      this.$emit('jumpTo', href)
     }
   },
   props: {
@@ -77,7 +158,14 @@ export default {
       default: false
     },
     fontSizeList: Array,
-    defaultFontSize: Number
+    defaultFontSize: Number,
+    themeList: Array,
+    defaultTheme: Number,
+    bookAvailable: Boolean,
+    navigation: Object
+  },
+  components: {
+    ContentView
   }
 }
 </script>
@@ -192,6 +280,82 @@ export default {
         }
       }
     }
+    .setting-theme {
+      height: 100%;
+      display: flex;
+      .setting-theme-item {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: px2rem(5);
+        box-sizing: border-box;
+        .preview {
+          flex: 1;
+          border: px2rem(1) solid #ccc;
+          box-sizing: border-box;
+          &.no-border {
+            border: none;
+          }
+        }
+        .text {
+          flex: 0 0 px2rem(20);
+          font-size: px2rem(14);
+          color: #ccc;
+          @include center;
+          &.text-selected {
+            color: #333;
+          }
+        }
+      }
+    }
+    .setting-progress {
+      width: 100%;
+      height: 100%;
+      // position: relative;
+      .progress-wrapper {
+        width: 100%;
+        height: 100%;
+        @include center;
+        padding: 0 px2rem(30);
+        box-sizing: border-box;
+        .progress {
+          width: 100%;
+          height: px2rem(2);
+          appearance: none;
+          background: linear-gradient(#999, #999) no-repeat, #ccc;
+          background-size: 0 100%;
+          &:focus {
+            outline: none;
+          }
+          &::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: px2rem(20);
+            height: px2rem(20);
+            border: px2rem(1) solid #ddd;
+            border-radius: 50%;
+            box-shadow: 0 4px 4px rgba(0, 0, 0, 0.15);
+            background-color: #fff;
+          }
+        }
+      }
+      .text-wrapper {
+        @include center;
+        margin-top: -8px;
+        span {
+          color: #999;
+          font-size: px2rem(12);
+        }
+      }
+    }
+  }
+  .content-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 101;
+    background: rgba(51, 51, 51, 0.8);
   }
 }
 </style>
