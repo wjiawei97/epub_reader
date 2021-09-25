@@ -176,7 +176,7 @@ export default {
       this.registerTheme()
       // 切换主题
       this.setTheme(this.defaultTheme)
-      // 通过epubjs钩子函数实现获取location对象
+      // 通过epubjs钩子函数实现获取locations对象
       this.book.ready.then(() => {
         // 获取navigation对象
         this.navigation = this.book.navigation
