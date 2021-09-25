@@ -2,6 +2,8 @@
 
 > A Vue.js project
 
+## 可视化效果：[epub_reader](https://wjiawei97.github.io/epub_reader/dist/index.html#/)
+
 ## Build Setup
 
 ``` bash
